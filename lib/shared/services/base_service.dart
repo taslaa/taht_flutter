@@ -1,173 +1,178 @@
 import 'dart:convert';
-import 'dart:io';
-import 'dart:async';
-import 'package:taht/shared/utils/util.dart';
+
+import '../models/search_result.dart';
+import '../utils/util.dart';
+import 'package:flutter/material.dart';
 import 'package:http/http.dart';
-import 'package:http/io_client.dart';
-import 'package:flutter/foundation.dart';
 
 abstract class BaseService<T> with ChangeNotifier {
-  static String? _baseUrl;
-  String? _endpoint;
+  static String? baseUrl;
+  String endpoint = "api/";
 
-  HttpClient client = new HttpClient();
-  IOClient? http;
-
-  BaseService(String endpoint) {
-    _baseUrl = const String.fromEnvironment("baseUrl", defaultValue: "http://localhost:7015/api");
-    print("baseurl: $_baseUrl");
-
-    if (_baseUrl!.endsWith("/") == false) {
-      _baseUrl = _baseUrl! + "/";
-    }
-
-    _endpoint = endpoint;
-    client.badCertificateCallback = (cert, host, port) => true;
-    http = IOClient(client);
+  BaseService(String point) {
+    endpoint += point;
+    baseUrl = const String.fromEnvironment("baseUrl",
+        defaultValue: "https://localhost:7115/");
   }
 
-  Future<List<T>> getById(int id, [dynamic additionalData]) async {
-    var url = Uri.parse("$_baseUrl$_endpoint/$id");
+  Future<SearchResult<T>> getPaged({dynamic filter}) async {
+    var url = "$baseUrl$endpoint/GetPaged";
 
-    Map<String, String> headers = createHeaders();
-
-    var response = await http!.get(url, headers: headers);
-
-    if (isValidResponseCode(response)) {
-      var data = jsonDecode(response.body);
-      return data.map((x) => fromJson(x)).cast<T>().toList();
-    } else {
-      throw Exception("Exception... handle this gracefully");
-    }
-  }
-
-  Future<List<T>> get([dynamic search]) async {
-    var url = "$_baseUrl$_endpoint";
-
-    if (search != null) {
-      String queryString = getQueryString(search);
-      url = url + "?" + queryString;
+    if (filter != null) {
+      var querryString = getQueryString(filter);
+      url = "$url?$querryString";
     }
 
     var uri = Uri.parse(url);
+    var headers = createHeaders();
 
-    Map<String, String> headers = createHeaders();
-    print("get me");
-    var response = await http!.get(uri, headers: headers);
-    print("done $response");
-    if (isValidResponseCode(response)) {
+    Response response = await get(uri, headers: headers);
+
+    if (isValidResponse(response)) {
       var data = jsonDecode(response.body);
-      return data['result'].map((x) => fromJson(x)).cast<T>().toList();
+
+      var result = SearchResult<T>();
+      result.hasNextPage = data['hasNextPage'];
+      result.hasPreviousPage = data['hasPreviousPage'];
+      result.isFirstPage = data['isFirstPage'];
+      result.isLastPage = data['isLastPage'];
+      result.pageCount = data['pageCount'];
+      result.pageNumber = data['pageNumber'];
+      result.pageSize = data['pageSize'];
+      result.totalCount = data['totalCount'];
+
+      for (var a in data['items']) {
+        result.items.add(fromJson(a));
+      }
+
+      return result;
     } else {
-      throw Exception("Exception... handle this gracefully");
+      throw Exception("Unknown error");
     }
   }
 
-  Future<T?> insert(dynamic request) async {
-    var url = "$_baseUrl$_endpoint";
+  Future<T> insert(dynamic object) async {
+    var url = "$baseUrl$endpoint";
     var uri = Uri.parse(url);
+    var headers = createHeaders();
 
-    Map<String, String> headers = createHeaders();
-    var jsonRequest = jsonEncode(request);
-    var response =
-        await http!.post(uri, headers: headers, body: jsonRequest);
+    var jsonRequest = jsonEncode(object);
 
-    if (isValidResponseCode(response)) {
+    Response response = await post(uri, headers: headers, body: jsonRequest);
+    if (isValidResponse(response)) {
       var data = jsonDecode(response.body);
-      return fromJson(data) as T;
+
+      return fromJson(data);
     } else {
-      return null;
+      throw Exception("Unknown error");
     }
   }
 
-  Future<T?> update(int id, [dynamic request]) async {
-    var url = "$_baseUrl$_endpoint/$id";
+  Future<T> update(dynamic object) async {
+    // [ ] znaci opcionalno
+    var url = "$baseUrl$endpoint";
     var uri = Uri.parse(url);
+    var headers = createHeaders();
 
-    Map<String, String> headers = createHeaders();
+    var jsonRequest = jsonEncode(object);
 
-    var response =
-        await http!.put(uri, headers: headers, body: jsonEncode(request));
-
-    if (isValidResponseCode(response)) {
+    Response response = await put(uri, headers: headers, body: jsonRequest);
+    if (isValidResponse(response)) {
       var data = jsonDecode(response.body);
-      return fromJson(data) as T;
+
+      return fromJson(data);
     } else {
-      return null;
+      throw Exception("Unknown error");
     }
   }
 
-  Map<String, String> createHeaders() {
-    String? username = Authorization.username;
-    String? password = Authorization.password;
+  Future remove(int id) async {
+    // [ ] znaci opcionalno
+    var url = "$baseUrl$endpoint/$id";
+    var uri = Uri.parse(url);
+    var headers = createHeaders();
 
-    String basicAuth =
-        "Basic ${base64Encode(utf8.encode('$username:$password'))}";
+    Response response = await delete(uri, headers: headers);
+    if (isValidResponse(response)) {
+    } else {
+      throw Exception("Unknown error");
+    }
+  }
 
-    var headers = {
-      "Content-Type": "application/json",
-      "Authorization": basicAuth
-    };
-    return headers;
+  Future getById(int id) async {
+    var url = "$baseUrl$endpoint/$id";
+    var uri = Uri.parse(url);
+    var headers = createHeaders();
+
+    Response response = await get(uri, headers: headers);
+    if (isValidResponse(response)) {
+//       if(response.body!=""){
+// var data = jsonDecode(response.body);
+
+//       return fromJson(data);
+//       }
+      var data = jsonDecode(response.body);
+
+      return fromJson(data);
+    } else {
+      throw Exception("Unknown error");
+    }
   }
 
   T fromJson(data) {
-    throw Exception("Override method");
+    throw Exception("not implemented");
   }
+}
 
-  String getQueryString(Map params,
-      {String prefix: '&', bool inRecursion: false}) {
-    String query = '';
-    params.forEach((key, value) {
-      if (inRecursion) {
-        if (key is int) {
-          key = '[$key]';
-        } else if (value is List || value is Map) {
-          key = '.$key';
-        } else {
-          key = '.$key';
-        }
-      }
-      if (value is String || value is int || value is double || value is bool) {
-        var encoded = value;
-        if (value is String) {
-          encoded = Uri.encodeComponent(value);
-        }
-        query += '$prefix$key=$encoded';
-      } else if (value is DateTime) {
-        query += '$prefix$key=${(value as DateTime).toIso8601String()}';
+bool isValidResponse(Response response) {
+  if (response.statusCode < 299) {
+    return true;
+  } else if (response.statusCode == 401) {
+    throw Exception("Unauthorized");
+  } else {
+    throw Exception(
+        "Something bad happened please try again. Message: ${response.body}");
+  }
+}
+
+Map<String, String> createHeaders() {
+  String jwt = Autentification.token ?? '';
+
+  String jwtAuth = "Bearer $jwt";
+
+  var headers = {"Content-Type": "application/json", "Authorization": jwtAuth};
+
+  return headers;
+}
+
+String getQueryString(Map params,
+    {String prefix = '&', bool inRecursion = false}) {
+  String query = '';
+  params.forEach((key, value) {
+    if (inRecursion) {
+      if (key is int) {
+        key = '[$key]';
       } else if (value is List || value is Map) {
-        if (value is List) value = value.asMap();
-        value.forEach((k, v) {
-          query +=
-              getQueryString({k: v}, prefix: '$prefix$key', inRecursion: true);
-        });
-      }
-    });
-    return query;
-  }
-
-  bool isValidResponseCode(Response response) {
-    if (response.statusCode == 200) {
-      if (response.body != "") {
-        return true;
+        key = '.$key';
       } else {
-        return false;
+        key = '.$key';
       }
-    } else if (response.statusCode == 204) {
-      return true;
-    } else if (response.statusCode == 400) {
-      throw Exception("Bad request");
-    } else if (response.statusCode == 401) {
-      throw Exception("Unauthorized");
-    } else if (response.statusCode == 403) {
-      throw Exception("Forbidden");
-    } else if (response.statusCode == 404) {
-      throw Exception("Not found");
-    } else if (response.statusCode == 500) {
-      throw Exception("Internal server error");
-    } else {
-      throw Exception("Exception... handle this gracefully");
     }
-  }
+    if (value is String || value is int || value is double || value is bool) {
+      var encoded = value;
+      if (value is String) {
+        encoded = Uri.encodeComponent(value);
+      }
+      query += '$prefix$key=$encoded';
+    } else if (value is DateTime) {
+      query += '$prefix$key=${(value as DateTime).toIso8601String()}';
+    } else if (value is List || value is Map) {
+      if (value is List) value = value.asMap();
+      value.forEach((k, v) {
+        query +=
+            getQueryString({k: v}, prefix: '$prefix$key', inRecursion: true);
+      });
+    }
+  });
+  return query;
 }

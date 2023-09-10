@@ -5,20 +5,19 @@ import 'package:http/http.dart';
 
 class AuthService extends ChangeNotifier {
   static String? _baseUrl;
-  String _endpoint = "/Access/SignIn";
-
+  String _endpoint = "api/Access/SignIn";
+ 
   AuthService() {
     _baseUrl = const String.fromEnvironment("baseUrl",
-        defaultValue: "http://localhost:7015/api");
+        defaultValue: "https://localhost:7115/");
   }
 
-  Future<dynamic> signIn(String email, String password) async {
-  try {
-    _endpoint = "/Access/SignIn";
+  Future<dynamic> signIn(String em, String ps) async {
+    _endpoint = "api/Access/SignIn";
     var url = "$_baseUrl$_endpoint";
 
     var uri = Uri.parse(url);
-    var jsonRequest = jsonEncode({'email': email, 'password': password});
+    var jsonRequest = jsonEncode({'email': em, 'password': ps});
 
     Response response = await post(uri,
         headers: {
@@ -33,18 +32,12 @@ class AuthService extends ChangeNotifier {
 
       return result;
     } else {
-      print('Invalid response: ${response.statusCode}');
-      print('Response body: ${response.body}');
-      throw Exception("Unknown error");
+      throw  Exception("Unknown error");
     }
-  } catch (e) {
-    print('Error during sign-in: $e');
-    throw e; // Rethrow the exception to propagate it
   }
-}
 
   Future<dynamic> signUp(dynamic object) async {
-    _endpoint = "/Access/SignUp";
+    _endpoint = "api/Access/SignUp";
     var url = "$_baseUrl$_endpoint";
 
     var uri = Uri.parse(url);
@@ -59,7 +52,7 @@ class AuthService extends ChangeNotifier {
 
     if (isValidResponse(response)) {
     } else {
-      throw Exception("Unknown error");
+      throw  Exception("Unknown error");
     }
   }
 }
@@ -71,7 +64,7 @@ bool isValidResponse(Response response) {
     throw Exception("Unauthorized");
   } else {
     throw Exception(
-        "Something bad happened please try again,\n${response.body}");
+        "Something bad happened please try again, Status code: ${response.statusCode}");
   }
 }
 

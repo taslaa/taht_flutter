@@ -1,31 +1,27 @@
 import 'dart:convert';
-import 'dart:typed_data';
-import 'package:flutter/widgets.dart';
-import 'package:intl/intl.dart';
 
+import 'package:flutter/material.dart';
 
-class Authorization {
-  static String? username;
-  static String? password;
+class Autentification {
+  static String? token;
+  static Map? tokenDecoded;
 }
 
-Image imageFromBase64String(String base64String) {
-  return Image.memory(base64Decode(base64String));
-}
-
-Uint8List dataFromBase64String(String base64String) {
-  return base64Decode(base64String);
-}
-
-String base64String(Uint8List data) {
-  return base64Encode(data);
-}
-
-String formatNumber(dynamic) {
-  var f = NumberFormat('###,00');
-  if (dynamic == null) {
-    return "";
+dynamic DateEncode(dynamic item) {
+  if (item is DateTime) {
+    return item.toIso8601String();
   }
-  
-  return f.format(dynamic);
+  return item;
 }
+
+Image imageFromBase64String(String base64Image) {
+  return Image.memory(
+    base64Decode(base64Image),
+    height: 250,
+    width: 250,
+  );
+}
+
+ButtonStyle buttonStyleSecondary = ElevatedButton.styleFrom(
+    primary: Colors.brown[100], onPrimary: Colors.black);
+

@@ -1,6 +1,4 @@
-import 'package:equatable/equatable.dart';
-
-class BaseEntity extends Equatable {
+class BaseEntity {
   final int? id;
   final bool? isDeleted;
   final DateTime? createdAt;

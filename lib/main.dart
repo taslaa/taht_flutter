@@ -4,7 +4,7 @@ import 'package:taht/features/user/screens/login_screen.dart'; // Import your Lo
 import 'package:taht/shared/network/http_overrides.dart'; // Import your custom HttpOverrides
 
 void main() {
-  HttpOverrides.global = new MyHttpOverrides(); // Replace MyHttpOverrides with your custom class if necessary
+  //HttpOverrides.global = new MyHttpOverrides(); // Replace MyHttpOverrides with your custom class if necessary
   runApp(const MyApp());
 }
 
